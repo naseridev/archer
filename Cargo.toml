@@ -1,0 +1,27 @@
+[package]
+name = "archer"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+aes = "0.8"
+ctr = "0.9"
+pbkdf2 = { version = "0.12", features = ["simple"] }
+sha2 = "0.10"
+rand = "0.8"
+rayon = "1.8"
+subtle = "2.5"
+clap = { version = "4.4", features = ["derive"] }
+rpassword = "7.3"
+thiserror = "1.0"
+chrono = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.dev]
+opt-level = 0

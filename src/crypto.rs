@@ -1,0 +1,78 @@
+use aes::Aes256;
+use aes::cipher::{KeyIvInit, StreamCipher};
+use ctr::Ctr64BE;
+use pbkdf2::pbkdf2_hmac;
+use sha2::{Digest, Sha256};
+
+use crate::constants::*;
+
+type Aes256Ctr = Ctr64BE<Aes256>;
+
+pub struct KeyPair {
+    pub encryption_key: [u8; KEY_LEN],
+    pub mac_key: [u8; KEY_LEN],
+}
+
+impl Drop for KeyPair {
+    fn drop(&mut self) {
+        self.encryption_key.fill(0);
+        self.mac_key.fill(0);
+    }
+}
+
+pub fn derive_keys(password: &str, salt: &[u8]) -> KeyPair {
+    let mut encryption_key = [0u8; KEY_LEN];
+    let mut mac_key = [0u8; KEY_LEN];
+
+    pbkdf2_hmac::<Sha256>(
+        password.as_bytes(),
+        salt,
+        PBKDF_ITER_MAIN,
+        &mut encryption_key,
+    );
+
+    let mut mac_salt = salt.to_vec();
+
+    mac_salt.extend_from_slice(MAC_SALT_SUFFIX);
+    pbkdf2_hmac::<Sha256>(password.as_bytes(), &mac_salt, PBKDF_ITER_MAC, &mut mac_key);
+
+    mac_salt.fill(0);
+
+    KeyPair {
+        encryption_key,
+        mac_key,
+    }
+}
+
+pub fn process_chunk(
+    key: &[u8; KEY_LEN],
+    nonce: &[u8; NONCE_LEN],
+    data: &[u8],
+    byte_offset: usize,
+) -> Vec<u8> {
+    let block_counter = (byte_offset / 16) as u64;
+    let mut full_nonce = [0u8; 16];
+
+    full_nonce[..NONCE_LEN].copy_from_slice(nonce);
+    full_nonce[NONCE_LEN..].copy_from_slice(&block_counter.to_be_bytes());
+
+    let mut cipher = Aes256Ctr::new(key.into(), &full_nonce.into());
+    let mut result = data.to_vec();
+
+    cipher.apply_keystream(&mut result);
+
+    result
+}
+
+pub fn compute_mac(mac_key: &[u8; KEY_LEN], data_hash: &[u8]) -> [u8; MAC_LEN] {
+    let mut mac_hasher = Sha256::new();
+
+    mac_hasher.update(mac_key);
+    mac_hasher.update(data_hash);
+
+    let result = mac_hasher.finalize();
+    let mut mac = [0u8; MAC_LEN];
+
+    mac.copy_from_slice(&result);
+    mac
+}

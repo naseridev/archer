@@ -1,0 +1,12 @@
+pub const MAGIC: &[u8] = b"ARCH";
+pub const VERSION: u8 = 1;
+pub const HEADER_SIZE: usize = 32768;
+pub const SECTOR_SIZE: usize = 2048;
+pub const MAC_SALT_SUFFIX: &[u8] = b"mac";
+pub const PBKDF_ITER_MAIN: u32 = 100000;
+pub const PBKDF_ITER_MAC: u32 = 20000;
+pub const KEY_LEN: usize = 32;
+pub const SALT_LEN: usize = 32;
+pub const NONCE_LEN: usize = 8;
+pub const MAC_LEN: usize = 32;
+pub const CHUNK_SIZE: usize = 8 * 1024 * 1024;
