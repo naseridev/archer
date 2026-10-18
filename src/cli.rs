@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::hint::black_box;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -68,13 +69,14 @@ impl SecureString {
     }
 
     pub fn as_str(&self) -> &str {
-        unsafe { std::str::from_utf8_unchecked(&self.data) }
+        std::str::from_utf8(&self.data).unwrap_or("")
     }
 }
 
 impl Drop for SecureString {
     fn drop(&mut self) {
         self.data.fill(0);
+        black_box(self.data.as_mut_slice());
     }
 }
 
@@ -83,17 +85,20 @@ pub fn get_password(confirm: bool) -> Result<SecureString, crate::error::ArcherE
         return Ok(SecureString::new(password));
     }
 
-    let password =
-        rpassword::prompt_password("Password: ").map_err(crate::error::ArcherError::Io)?;
+    let password = SecureString::new(
+        rpassword::prompt_password("Password: ").map_err(crate::error::ArcherError::Io)?,
+    );
 
     if confirm {
-        let confirm_password = rpassword::prompt_password("Confirm password: ")
-            .map_err(crate::error::ArcherError::Io)?;
+        let confirm_password = SecureString::new(
+            rpassword::prompt_password("Confirm password: ")
+                .map_err(crate::error::ArcherError::Io)?,
+        );
 
-        if password != confirm_password {
+        if password.as_str() != confirm_password.as_str() {
             return Err(crate::error::ArcherError::PasswordMismatch);
         }
     }
 
-    Ok(SecureString::new(password))
+    Ok(password)
 }

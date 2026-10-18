@@ -9,4 +9,6 @@ pub const KEY_LEN: usize = 32;
 pub const SALT_LEN: usize = 32;
 pub const NONCE_LEN: usize = 8;
 pub const MAC_LEN: usize = 32;
+pub const METADATA_SIZE: usize = 4 + 1 + SALT_LEN + NONCE_LEN + 8;
 pub const CHUNK_SIZE: usize = 8 * 1024 * 1024;
+pub const BATCH_CHUNKS: usize = 8;
